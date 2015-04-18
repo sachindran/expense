@@ -145,8 +145,7 @@ $(function(ready){
             .find('option')
             .remove()
             .end()
-            .append('<option selected="selected">Choose Project</option>')
-            .append('<option value="all">All</option>');
+            .append('<option selected="selected" value="all">All</option>');
             $( "#graPro" ).val("Choose Route").change();
             var department = $("#graDep").val();
             if(department == "all")
@@ -198,7 +197,9 @@ function GetDataForGraph(page)
     var ajaxcalled = false;
     if((graCosDataCheck(page)==true) && (graphDataCheck ==true))
         {
-            
+            var projects = $("#"+page+"Pro").val() || [];
+            var projectsString="";
+            var numOfProjects = (projects.length);
             var department = $("#"+page+"Dep").val();
             var project = $("#"+page+"Pro").val();
             var graphSeries = $("#"+page+"SeriesType").val();
@@ -208,6 +209,20 @@ function GetDataForGraph(page)
             var toDate = ($("#"+page+"toDate").val()).split("-");
             var jsonText1;
             var urlSelected;
+
+            for(var i=0;i<projects.length;i++)
+            {
+                if(i==(projects.length-1))
+                {
+                    projectsString += projects[i];
+                }
+                else
+                {
+                    projectsString += projects[i]+",";
+                }
+                
+            }
+
             if(department == "all")
             {
                 if(graphSeries=="column")
@@ -246,7 +261,7 @@ function GetDataForGraph(page)
                 criteria = "All Department";
                 criteriaValue = "All";
             }
-            else if(project == "all")
+            else if(projects[0] == "all")
             {
                 if(graphSeries=="column")
                 {
@@ -285,26 +300,34 @@ function GetDataForGraph(page)
             {
                 if(graphSeries=="column")
                 {
-                    jsonText1 = JSON.stringify({fromMonth: fromDate[1],toMonth:toDate[1],fromYear:fromDate[0],toYear:toDate[0],projectId:project,deptId:department});
-                    urlSelected = "http://thekbsystems.com/WorldPorts-SustainabilityForum/UserDetails.asmx/GetBarDiagramDataTable"; // add web service Name and web service Method Name
+                    jsonText1 = JSON.stringify({fromMonth: fromDate[1],toMonth:toDate[1],fromYear:fromDate[0],toYear:toDate[0],deptId:department, projectsString:projectsString,noOfprojects:numOfProjects});
+                    urlSelected = "http://thekbsystems.com/WorldPorts-SustainabilityForum/UserDetails.asmx/GetBarDiagramDataforMultipleProjects"; // add web service Name and web service Method Name
                 }
                 else if (graphSeries == "line") 
                 {
-                    jsonText1 = JSON.stringify({fromMonth: fromDate[1],toMonth:toDate[1],fromYear:fromDate[0],toYear:toDate[0],projectId:project,deptId:department});
-                    urlSelected = "http://thekbsystems.com/WorldPorts-SustainabilityForum/UserDetails.asmx/GetLineDiagramDataTable"; // add web service Name and web service Method Name
+                    jsonText1 = JSON.stringify({fromMonth: fromDate[1],toMonth:toDate[1],fromYear:fromDate[0],toYear:toDate[0],deptId:department, projectsString:projectsString,noOfprojects:numOfProjects});
+                    urlSelected = "http://thekbsystems.com/WorldPorts-SustainabilityForum/UserDetails.asmx/GetLineDiagramDataforMultipleProjects"; // add web service Name and web service Method Name
                 }
                 else
                 {
-                    $("#pieChart1").empty();
-                    $("#pieChart2").empty();
-                    $("#pieChart3").empty();
-                    $("#graChart").igDataChart();
-                    $("#graChart").igDataChart( "destroy" );
-                
-                    $("#graHorizontalZoomSlider").val(1);
-                    $("#graHorizontalZoomSlider").slider('refresh');
-                    jsonText1 = JSON.stringify({fromMonth: fromDate[1],toMonth:toDate[1],fromYear:fromDate[0],toYear:toDate[0],projectId:project,deptId:department});
-                    urlSelected = "http://thekbsystems.com/WorldPorts-SustainabilityForum/UserDetails.asmx/GetPieDiagramDataTable"; // add web service Name and web service Method Name
+                    if(numOfProjects>1)
+                    {
+                        alert("Select only one Project.");
+                        ajaxcalled = true;
+                    }
+                    else
+                    {
+                        $("#pieChart1").empty();
+                        $("#pieChart2").empty();
+                        $("#pieChart3").empty();
+                        $("#graChart").igDataChart();
+                        $("#graChart").igDataChart( "destroy" );
+                    
+                        $("#graHorizontalZoomSlider").val(1);
+                        $("#graHorizontalZoomSlider").slider('refresh');
+                        jsonText1 = JSON.stringify({fromMonth: fromDate[1],toMonth:toDate[1],fromYear:fromDate[0],toYear:toDate[0],projectId:projects[0],deptId:department});
+                        urlSelected = "http://thekbsystems.com/WorldPorts-SustainabilityForum/UserDetails.asmx/GetPieDiagramDataTable"; // add web service Name and web service Method Name
+                    }
                 }
                 criteria = "Project";
                 criteriaValue = project;
@@ -333,7 +356,14 @@ function GetDataForGraph(page)
                                     var rawData = data;
                                     if(graphSeries == "line" || graphSeries == "column")
                                     {
+                                        if(criteria=="All Department" || criteria == "All Project")
+                                        {
                                         igniteChart(data,graphSeries,page,criteria,criteriaValue);
+                                        }
+                                        else
+                                        {
+                                            igniteChartMulti(data,graphSeries,page,criteria,criteriaValue,projects,numOfProjects);   
+                                        }
                                     }
                                     else
                                     {
@@ -441,11 +471,11 @@ function drawEnePieChart(data,page,criteria,grapDiv)
         {
             if(key == "DeptID")
             {
-                data1[i+1] = [data[i][key]+" ",data[i].Amount];    
+                data1[i+1] = [$("#graDep option[value='"+data[i][key]+"']").text()+" ",data[i].Amount];    
             }
             else if(key == "ProjectID")
             {
-                data1[i+1] = [data[i][key]+" ",data[i].Amount];    
+                data1[i+1] = [$("#graPro option[value='"+data[i][key]+"']").text()+" ",data[i].Amount];    
             }
             else
             {
@@ -536,29 +566,29 @@ function getMonth(value)
     switch(value)
     {
         case 1:
-            return "January";
+            return "Jan";
         case 2:
-            return "February";
+            return "Feb";
         case 3:
-            return "March";
+            return "Mar";
         case 4:
-            return "April";
+            return "Apr";
         case 5:
             return "May";
         case 6:
-            return "June";
+            return "Jun";
         case 7:
-            return "July";
+            return "Jul";
         case 8:
-            return "August";
+            return "Aug";
         case 9:
-            return "September";
+            return "Sep";
         case 10:
-            return "October";
+            return "Oct";
         case 11:
-            return "November";
+            return "Nov";
         case 12:
-            return "December";        
+            return "Dec";
         default:
             return;    
     }
@@ -718,6 +748,194 @@ function igniteChart(rawData,seriesType,Page,criteria,criteriaValue)
                 });
             }); 
     }    
+function igniteChartMulti(rawData,seriesType,Page,criteria,criteriaValue,porjectIds,numOfProjects)
+    {
+    $(function () {
+        $("#"+Page+"Chart").igDataChart();
+        $("#"+Page+"Chart").igDataChart( "destroy" );
+        $("#pieChart1").empty();
+        $("#pieChart2").empty();
+        $("#pieChart3").empty();
+
+        $("#"+Page+"HorizontalZoomSlider").val(1);
+        $("#"+Page+"HorizontalZoomSlider").slider('refresh');
+        //var varSelName = getVariableName(varSel);
+        
+        var title;
+        var seriesTitle;
+        var seriesType = $("#"+Page+"SeriesType").val();
+        var graphData = [];
+        var avg = rawData[0]["Amount"];
+        var monthsCount = (rawData.length)/numOfProjects;
+        if(seriesType == "column")
+        {
+            if(criteria == "All Department")
+            {
+                title = "Parish County Expense Graph";
+                seriesTitle = "Parish County";
+            }
+            else if(criteria == "All Project")
+            {
+                title = $("#"+Page+"Dep option:selected").text()+" Expense Graph";
+                seriesTitle = $("#"+Page+"Dep option:selected").text();
+            }
+            else
+            {
+                if(numOfProjects == 1)
+                {
+                    title = $("#"+Page+"Pro option:selected").text()+" Expense Graph";
+                    seriesTitle = $("#"+Page+"Pro option:selected").text();
+                }
+                else
+                {
+                    title = "Projects Comparision Expense Graph";
+                    seriesTitle = $("#"+Page+"Pro option:selected").text();
+                }
+            }
+        }
+        else
+        {
+            if(criteria == "All Department")
+            {
+                title = "Parish County Expense Cumulative Graph";
+                seriesTitle = "Parish County";
+            }
+            else if(criteria == "All Project")
+            {
+                title = "Projects Comparision Expense Cumulative Graph";
+                seriesTitle = $("#"+Page+"Dep option:selected").text();
+            }
+            else
+            {
+                if(numOfProjects == 1)
+                {
+                    title = $("#"+Page+"Pro option:selected").text()+" Expense Cumulative Graph";
+                    seriesTitle = $("#"+Page+"Pro option:selected").text();
+                }
+                else
+                {
+                    title = "Projects Comparision Expense Cumulative Graph";
+                    seriesTitle = $("#"+Page+"Pro option:selected").text();
+                }
+            }
+        }
+        var marker = "none";
+        var thickness = 5;
+        var seriesType = $("#"+Page+"SeriesType").val();
+        if (seriesType == "area" ||
+            seriesType == "splineArea" ||
+            seriesType == "column" ||
+            seriesType == "waterfall" ||
+            seriesType == "point" ||
+            seriesType == "stepArea") 
+            {
+                thickness = 1;
+            }
+        if (seriesType == "point") 
+            {
+                marker = "circle";
+            }
+        if(numOfProjects == 1)
+        {
+            for(i=0;i<rawData.length;i++)
+            {
+                var Date = getMonth(rawData[i].Month)+""+(rawData[i].year);
+                var projectValue = "Project"+rawData[i].projectId+"Value";
+                graphData[i] = {Date: Date};
+                graphData[i][projectValue] = rawData[i]["Amount"];
+                if(avg>rawData[i]["Amount"])
+                    {
+                        avg = rawData[i].Amount;
+                    }
+            }
+        }
+        else
+        {
+            for(i=0;i<monthsCount;i++)
+            {
+                var Date = getMonth(rawData[i].Month)+""+(rawData[i].year);
+                graphData[i] = {Date: Date};
+            }
+            i=0;
+            while(i<rawData.length)
+            {
+                var projectValue = "Project"+rawData[i].projectId+"Value";
+                for(j=0;j<monthsCount;j++)
+                {
+                    graphData[j][projectValue] = rawData[i]["Amount"];
+                    if(avg>rawData[i]["Amount"])
+                    {
+                        avg = rawData[i]["Amount"];
+                    }
+                    i++;
+                }
+            }
+        }
+        var series = [];
+        for(i=0;i<numOfProjects;i++)
+        {
+            var projectId = porjectIds[i];
+            var projectName;
+            var projectValue = "Project"+projectId+"Value";
+            portName = $("#graPro option[value='"+projectId+"']").text();
+            series[i]= {
+                        name: portName,
+                            type: seriesType,
+                            title: portName,
+                            xAxis: "DateAxis",
+                            yAxis: "CatAxis",
+                            valueMemberPath: projectValue,
+                            markerType: marker,
+                            isTransitionInEnabled: true,
+                            isHighlightingEnabled: true,
+                            thickness: thickness
+                        }
+        }
+   
+        var data = [
+            { "CountryName": "China", "Pop1995": 1216, "Pop2005": 1297, "Pop2015": 1361, "Pop2025": 1394 },
+            { "CountryName": "India", "Pop1995": 920, "Pop2005": 1090, "Pop2015": 1251, "Pop2025": 1396 },
+            { "CountryName": "United States", "Pop1995": 266, "Pop2005": 295, "Pop2015": 322, "Pop2025": 351 },
+            { "CountryName": "Indonesia", "Pop1995": 197, "Pop2005": 229, "Pop2015": 256, "Pop2025": 277 },
+            { "CountryName": "Brazil", "Pop1995": 161, "Pop2005": 186, "Pop2015": 204, "Pop2025": 218 }
+        ];
+
+        $("#"+Page+"Chart").igDataChart({
+            legend: { element: Page+"LineLegend" },
+            title: title,
+            horizontalZoomable: true,
+            verticalZoomable: true,
+            dataSource: graphData,
+            axes: [
+                {
+                    name: "DateAxis",
+                    type: "categoryX",
+                    label: "Date"
+                },
+                {
+                    name: "CatAxis",
+                    type: "numericY", 
+                    minimumValue: avg-1000,
+                    title: "Units",
+                }
+            ],
+            series: series
+                
+        });
+        $("#"+Page+"Chart").igDataChart("resetZoom");
+
+        $("#"+Page+"Chart").igDataChart({defaultInteraction: "dragPan"});
+        
+        
+        $("#"+Page+"HorizontalZoomSlider").change(function (e) {
+            var val = $("#"+Page+"HorizontalZoomSlider").val();
+            val = Math.abs(val-101);
+            val = val/100;
+            $("#"+Page+"Chart").igDataChart("option", "windowScaleVertical", 1);
+            $("#"+Page+"Chart").igDataChart("option", "windowScaleHorizontal", val);
+        });
+    }); 
+}        
 function checkPreAuth() {
         var form = $("#loginForm");
         if((window.localStorage["username"] != undefined && window.localStorage["password"] != undefined)&&(window.localStorage["username"] != "" && window.localStorage["password"] != "")) {
